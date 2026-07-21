@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KBO Analytics & Prediction Dashboard</title>
+  <!-- Google Fonts: Outfit and Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background decorations -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-section">
+        <span class="logo-icon">⚾</span>
+        <h1>KBO <span class="text-gradient">Analytics</span></h1>
+      </div>
+      
+      <div class="status-panel">
+        <div class="status-item">
+          <span class="status-indicator" id="status-dot"></span>
+          <span id="status-text">Cargando scraper...</span>
+        </div>
+        <div class="status-item time-info">
+          <span>Act. hace: <strong id="last-updated">--:--</strong></span>
+          <span class="divider">|</span>
+          <span>Próxima en: <strong id="next-update">--s</strong></span>
+        </div>
+        <button id="btn-manual-sync" class="btn btn-icon" title="Sincronizar ahora">
+          <svg class="icon-sync" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6c0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4l-4-4v3z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container">
+    <!-- Sidebar: Games List -->
+    <aside class="sidebar-panel card">
+      <div class="panel-header">
+        <h2>Partidos Disponibles</h2>
+        <span class="badge" id="games-count">0</span>
+      </div>
+      
+      <div class="games-list" id="games-list">
+        <!-- Matchups will be populated here -->
+        <div class="loading-placeholder">
+          <div class="spinner"></div>
+          <p>Buscando partidos...</p>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button id="btn-open-manual" class="btn btn-outline btn-block">
+          📥 Ingreso / Pegado Manual
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Dashboard -->
+    <section class="dashboard-content">
+      <!-- Game details wrapper (hidden if no game selected) -->
+      <div id="game-dashboard" style="display: none;">
+        <!-- Matchup Title Card -->
+        <div class="matchup-banner card">
+          <div class="team-banner-side team-away">
+            <div class="team-abbr" id="lbl-away-abbr">VIS</div>
+            <div class="team-name" id="lbl-away-name">Equipo Visitante</div>
+            <div class="team-record" id="lbl-away-record">00-00-0</div>
+          </div>
+          
+          <div class="matchup-vs">VS</div>
+          
+          <div class="team-banner-side team-home">
+            <div class="team-abbr" id="lbl-home-abbr">LOC</div>
+            <div class="team-name" id="lbl-home-name">Equipo Local</div>
+            <div class="team-record" id="lbl-home-record">00-00-0</div>
+          </div>
+        </div>
+
+        <!-- Prediction Card -->
+        <div class="prediction-section card">
+          <div class="prediction-header">
+            <h3>Porcentaje de Victoria (Predicción)</h3>
+            <span class="info-tooltip" title="Calculado en base a Pythagorean Expectation, FIP/WHIP del abridor y enfrentamientos ofensiva/defensa.">ⓘ Modelo KBO v1.0</span>
+          </div>
+          
+          <div class="prediction-visual">
+            <div class="probability-bar-container">
+              <div class="probability-label">
+                <span id="pct-away-label">Visitante: 50%</span>
+                <span id="pct-home-label">Local: 50%</span>
+              </div>
+              <div class="probability-bar">
+                <div class="prob-fill prob-fill-away" id="bar-away" style="width: 50%;"></div>
+                <div class="prob-fill prob-fill-home" id="bar-home" style="width: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- Glowing Dial -->
+            <div class="dial-container">
+              <div class="dial-glow"></div>
+              <div class="dial-value" id="dial-value-text">50%</div>
+              <div class="dial-subtext" id="dial-subtext">Favorito Local</div>
+            </div>
+          </div>
+
+          <!-- Justificación del Ganador -->
+          <div class="justification-container" style="margin-top: 20px; border-top: 1px dashed var(--panel-border); padding-top: 16px;">
+            <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.05em;">
+              <span>📝</span> Justificación del Ganador
+            </h4>
+            <div id="justification-text" style="font-size: 13.5px; line-height: 1.6; color: var(--text-secondary);">
+              Analizando fortalezas colectivas y lanzadores abridores para generar el reporte...
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Columns: Pitchers & Team Stats -->
+        <div class="dashboard-grid">
+          
+          <!-- Pitcher Matchup Card -->
+          <div class="grid-card card">
+            <div class="card-header">
+              <h3>⚾ Lanzadores Abridores</h3>
+            </div>
+            
+            <div class="pitchers-vs-container">
+              <div class="pitcher-profile side-away">
+                <div class="pitcher-name" id="p-away-name">Pitcher A</div>
+                <div class="pitcher-info-sub">LHP | Año: <span id="p-away-year">--</span></div>
+              </div>
+              <div class="vs-badge">VS</div>
+              <div class="pitcher-profile side-home">
+                <div class="pitcher-name" id="p-home-name">Pitcher B</div>
+                <div class="pitcher-info-sub">RHP | Año: <span id="p-home-year">--</span></div>
+              </div>
+            </div>
+
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th width="35%">Visitante</th>
+                  <th width="30%" class="txt-center">Métrica</th>
+                  <th width="35%" class="txt-right">Local</th>
+                </tr>
+              </thead>
+              <tbody id="pitcher-stats-body">
+                <!-- Rows will be populated by JS -->
+                <tr>
+                  <td id="p-away-era">0.00</td>
+                  <td class="stat-name">ERA</td>
+                  <td id="p-home-era" class="txt-right">0.00</td>
+                </tr>
+                <tr>
+                  <td id="p-away-whip">0.00</td>
+                  <td class="stat-name">WHIP</td>
+                  <td id="p-home-whip" class="txt-right">0.00</td>
+                </tr>
+                <tr>
+                  <td id="p-away-fip" class="stat-highlight">0.00</td>
+                  <td class="stat-name highlight-name">FIP (Calculado)</td>
+                  <td id="p-home-fip" class="txt-right stat-highlight">0.00</td>
+                </tr>
+                <tr>
+                  <td id="p-away-ip">0.0</td>
+                  <td class="stat-name">IP (Entradas)</td>
+                  <td id="p-home-ip" class="txt-right">0.0</td>
+                </tr>
+                <tr>
+                  <td id="p-away-so">0</td>
+                  <td class="stat-name">SO (Ponches)</td>
+                  <td id="p-home-so" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="p-away-bb">0</td>
+                  <td class="stat-name">BB (Bases)</td>
+                  <td id="p-home-bb" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="p-away-hr">0</td>
+                  <td class="stat-name">HR (Jonrones)</td>
+                  <td id="p-home-hr" class="txt-right">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Team Batting Card -->
+          <div class="grid-card card">
+            <div class="card-header">
+              <h3>🔥 Bateo Colectivo (Equipo)</h3>
+            </div>
+            
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th width="35%">Visitante</th>
+                  <th width="30%" class="txt-center">Métrica</th>
+                  <th width="35%" class="txt-right">Local</th>
+                </tr>
+              </thead>
+              <tbody id="batting-stats-body">
+                <tr>
+                  <td id="b-away-avg">.000</td>
+                  <td class="stat-name">AVG (Promedio)</td>
+                  <td id="b-home-avg" class="txt-right">.000</td>
+                </tr>
+                <tr>
+                  <td id="b-away-obp">.000</td>
+                  <td class="stat-name">OBP (Embasado)</td>
+                  <td id="b-home-obp" class="txt-right">.000</td>
+                </tr>
+                <tr>
+                  <td id="b-away-slg">.000</td>
+                  <td class="stat-name">SLG (Slugging)</td>
+                  <td id="b-home-slg" class="txt-right">.000</td>
+                </tr>
+                <tr>
+                  <td id="b-away-ops" class="stat-highlight">.000</td>
+                  <td class="stat-name highlight-name">OPS (OBP+SLG)</td>
+                  <td id="b-home-ops" class="txt-right stat-highlight">.000</td>
+                </tr>
+                <tr>
+                  <td id="b-away-hr">0</td>
+                  <td class="stat-name">HR (Jonrones)</td>
+                  <td id="b-home-hr" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="b-away-r">0</td>
+                  <td class="stat-name">Carreras Est. (G)</td>
+                  <td id="b-home-r" class="txt-right">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Team Pitching Card -->
+          <div class="grid-card card full-width-card">
+            <div class="card-header">
+              <h3>🛡️ Pitcheo Colectivo (Equipo)</h3>
+            </div>
+            
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th width="35%">Visitante</th>
+                  <th width="30%" class="txt-center">Métrica</th>
+                  <th width="35%" class="txt-right">Local</th>
+                </tr>
+              </thead>
+              <tbody id="pitching-team-stats-body">
+                <tr>
+                  <td id="t-away-era">0.00</td>
+                  <td class="stat-name">ERA (Efectividad)</td>
+                  <td id="t-home-era" class="txt-right">0.00</td>
+                </tr>
+                <tr>
+                  <td id="t-away-whip">0.00</td>
+                  <td class="stat-name">WHIP</td>
+                  <td id="t-home-whip" class="txt-right">0.00</td>
+                </tr>
+                <tr>
+                  <td id="t-away-hr">0</td>
+                  <td class="stat-name">HR Concedidos</td>
+                  <td id="t-home-hr" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="t-away-bb">0</td>
+                  <td class="stat-name">BB (Bases)</td>
+                  <td id="t-home-bb" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="t-away-so">0</td>
+                  <td class="stat-name">SO (Ponches)</td>
+                  <td id="t-home-so" class="txt-right">0</td>
+                </tr>
+                <tr>
+                  <td id="t-away-avg">.000</td>
+                  <td class="stat-name">AVG Permitido</td>
+                  <td id="t-home-avg" class="txt-right">.000</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div> <!-- End grid -->
+        
+        <!-- Editable stats panel for simulation -->
+        <div class="simulation-banner card">
+          <div class="sim-header">
+            <h4>🧪 Simulador de Partidos (Modifica las estadísticas)</h4>
+            <p>Puedes editar cualquier valor de arriba directamente haciendo doble clic, o usar el panel manual para probar escenarios.</p>
+          </div>
+          <button id="btn-edit-active" class="btn btn-primary">
+            Editar datos de este juego
+          </button>
+        </div>
+
+      </div>
+
+      <!-- No game selected placeholder -->
+      <div id="no-game-placeholder" class="no-game-selected card">
+        <span class="placeholder-icon">📊</span>
+        <h2>Ningún Partido Seleccionado</h2>
+        <p>Por favor, selecciona uno de los partidos en la barra lateral para ver su análisis detallado, o ingresa datos manualmente si el scraper aún no se ha ejecutado.</p>
+        <div class="quick-start-buttons">
+          <button id="btn-load-demo" class="btn btn-outline">Cargar Juego Demo</button>
+          <button id="btn-open-manual-2" class="btn btn-primary">Ingresar Datos Manuales</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Manual Paste & Editor -->
+  <div class="modal" id="modal-manual">
+    <div class="modal-overlay"></div>
+    <div class="modal-content card">
+      <div class="modal-header">
+        <h3>📥 Editor e Importador Manual de Datos</h3>
+        <button class="btn-close" id="btn-close-modal">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-smart">Smart Paste (Pegar desde MyKBO)</button>
+          <button class="tab-btn" data-tab="tab-form">Formulario Manual</button>
+        </div>
+        
+        <!-- Tab: Smart Paste -->
+        <div class="tab-pane active" id="tab-smart">
+          <p class="tab-desc">Abre una página en <strong>mykbostats.com</strong> (ej. perfil del pitcher o del equipo), selecciona todo el texto (Ctrl+A), cópialo (Ctrl+C) y pégalo abajo. Nuestro analizador inteligente detectará y cargará las estadísticas correspondientes.</p>
+          
+          <div class="form-group">
+            <label for="paste-target">Selecciona el destino del pegado:</label>
+            <select id="paste-target" class="form-control">
+              <option value="away-pitcher">Abridor Visitante</option>
+              <option value="home-pitcher">Abridor Local</option>
+              <option value="away-team">Equipo Visitante (Roster)</option>
+              <option value="home-team">Equipo Local (Roster)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="smart-paste-text">Pega el texto aquí (Ctrl+V):</label>
+            <textarea id="smart-paste-text" class="form-control" rows="8" placeholder="Pega el contenido aquí..."></textarea>
+          </div>
+          
+          <div class="modal-actions">
+            <button id="btn-parse-paste" class="btn btn-primary btn-block">Analizar y Cargar Datos</button>
+          </div>
+        </div>
+        
+        <!-- Tab: Full Form -->
+        <div class="tab-pane" id="tab-form">
+          <form id="manual-data-form">
+            <div class="form-grid">
+              <!-- Teams info -->
+              <div class="form-section-title">Nombres de Equipos</div>
+              <div class="form-group">
+                <label>Nombre Visitante</label>
+                <input type="text" id="form-away-name" class="form-control" value="Hanwha Eagles">
+              </div>
+              <div class="form-group">
+                <label>Nombre Local</label>
+                <input type="text" id="form-home-name" class="form-control" value="Kia Tigers">
+              </div>
+
+              <!-- Pitcher stats -->
+              <div class="form-section-title">Estadísticas del Abridor</div>
+              <div class="form-column">
+                <h4>Abridor Visitante</h4>
+                <div class="form-group"><label>Nombre</label><input type="text" id="form-ap-name" class="form-control" value="Owen White"></div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>ERA</label><input type="number" step="0.01" id="form-ap-era" class="form-control" value="3.09"></div>
+                  <div class="form-group"><label>WHIP</label><input type="number" step="0.01" id="form-ap-whip" class="form-control" value="1.20"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>IP</label><input type="text" id="form-ap-ip" class="form-control" value="80.1"></div>
+                  <div class="form-group"><label>FIP</label><input type="number" step="0.01" id="form-ap-fip" class="form-control" value="3.50"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SO</label><input type="number" id="form-ap-so" class="form-control" value="70"></div>
+                  <div class="form-group"><label>BB</label><input type="number" id="form-ap-bb" class="form-control" value="25"></div>
+                  <div class="form-group"><label>HR</label><input type="number" id="form-ap-hr" class="form-control" value="8"></div>
+                </div>
+              </div>
+
+              <div class="form-column">
+                <h4>Abridor Local</h4>
+                <div class="form-group"><label>Nombre</label><input type="text" id="form-hp-name" class="form-control" value="Adam Oller"></div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>ERA</label><input type="number" step="0.01" id="form-hp-era" class="form-control" value="2.52"></div>
+                  <div class="form-group"><label>WHIP</label><input type="number" step="0.01" id="form-hp-whip" class="form-control" value="1.01"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>IP</label><input type="text" id="form-hp-ip" class="form-control" value="103.2"></div>
+                  <div class="form-group"><label>FIP</label><input type="number" step="0.01" id="form-hp-fip" class="form-control" value="3.32"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SO</label><input type="number" id="form-hp-so" class="form-control" value="112"></div>
+                  <div class="form-group"><label>BB</label><input type="number" id="form-hp-bb" class="form-control" value="34"></div>
+                  <div class="form-group"><label>HR</label><input type="number" id="form-hp-hr" class="form-control" value="9"></div>
+                </div>
+              </div>
+
+              <!-- Batting stats -->
+              <div class="form-section-title">Bateo del Equipo</div>
+              <div class="form-column">
+                <h4>Colectivo Visitante</h4>
+                <div class="form-group-row">
+                  <div class="form-group"><label>AVG</label><input type="number" step="0.001" id="form-ab-avg" class="form-control" value="0.276"></div>
+                  <div class="form-group"><label>OBP</label><input type="number" step="0.001" id="form-ab-obp" class="form-control" value="0.342"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SLG</label><input type="number" step="0.001" id="form-ab-slg" class="form-control" value="0.420"></div>
+                  <div class="form-group"><label>OPS</label><input type="number" step="0.001" id="form-ab-ops" class="form-control" value="0.762"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>Runs</label><input type="number" id="form-ab-r" class="form-control" value="480"></div>
+                  <div class="form-group"><label>HR</label><input type="number" id="form-ab-hr" class="form-control" value="95"></div>
+                </div>
+              </div>
+
+              <div class="form-column">
+                <h4>Colectivo Local</h4>
+                <div class="form-group-row">
+                  <div class="form-group"><label>AVG</label><input type="number" step="0.001" id="form-hb-avg" class="form-control" value="0.270"></div>
+                  <div class="form-group"><label>OBP</label><input type="number" step="0.001" id="form-hb-obp" class="form-control" value="0.348"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SLG</label><input type="number" step="0.001" id="form-hb-slg" class="form-control" value="0.435"></div>
+                  <div class="form-group"><label>OPS</label><input type="number" step="0.001" id="form-hb-ops" class="form-control" value="0.783"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>Runs</label><input type="number" id="form-hb-r" class="form-control" value="510"></div>
+                  <div class="form-group"><label>HR</label><input type="number" id="form-hb-hr" class="form-control" value="105"></div>
+                </div>
+              </div>
+
+              <!-- Pitching stats -->
+              <div class="form-section-title">Pitcheo del Equipo</div>
+              <div class="form-column">
+                <h4>Colectivo Visitante</h4>
+                <div class="form-group-row">
+                  <div class="form-group"><label>ERA</label><input type="number" step="0.01" id="form-ap-team-era" class="form-control" value="4.11"></div>
+                  <div class="form-group"><label>WHIP</label><input type="number" step="0.01" id="form-ap-team-whip" class="form-control" value="1.38"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>HR</label><input type="number" id="form-ap-team-hr" class="form-control" value="82"></div>
+                  <div class="form-group"><label>BB</label><input type="number" id="form-ap-team-bb" class="form-control" value="320"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SO</label><input type="number" id="form-ap-team-so" class="form-control" value="650"></div>
+                  <div class="form-group"><label>AVG Permitido</label><input type="number" step="0.001" id="form-ap-team-avg" class="form-control" value="0.260"></div>
+                </div>
+              </div>
+
+              <div class="form-column">
+                <h4>Colectivo Local</h4>
+                <div class="form-group-row">
+                  <div class="form-group"><label>ERA</label><input type="number" step="0.01" id="form-hp-team-era" class="form-control" value="4.05"></div>
+                  <div class="form-group"><label>WHIP</label><input type="number" step="0.01" id="form-hp-team-whip" class="form-control" value="1.32"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>HR</label><input type="number" id="form-hp-team-hr" class="form-control" value="78"></div>
+                  <div class="form-group"><label>BB</label><input type="number" id="form-hp-team-bb" class="form-control" value="295"></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group"><label>SO</label><input type="number" id="form-hp-team-so" class="form-control" value="680"></div>
+                  <div class="form-group"><label>AVG Permitido</label><input type="number" step="0.001" id="form-hp-team-avg" class="form-control" value="0.252"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" id="btn-save-manual" class="btn btn-primary btn-block">Cargar y Ejecutar Simulación</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
